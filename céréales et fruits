@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Composition de la panière</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #fff8e1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      align-items: center;
+    }
+
+    .draggables {
+      display: flex;
+      gap: 20px;
+    }
+
+    .draggable {
+      width: 70px;
+      height: 70px;
+      background-size: cover;
+      background-position: center;
+      border-radius: 10px;
+      cursor: grab;
+      transition: transform 0.3s ease;
+    }
+
+    .draggable:focus {
+      outline: 2px dashed #a1887f;
+    }
+
+    .pain-cereales {
+      background-image: url('https://www.marmitedumonde.com/wp-content/uploads/2016/09/recette-pain-aux-cereales-rapide.jpg');
+    }
+
+    .pain-fruits {
+      background-image: url('https://bing.com/th?id=OSK.5217ee628a1a907d50bdc7a86b5010b8');
+    }
+
+    .dropzone {
+      width: 90%;
+      max-width: 600px;
+      height: 250px;
+      border: 3px dashed #a1887f;
+      background-color: #fff3e0;
+      border-radius: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      position: relative;
+    }
+
+    .dropzone::before {
+      content: "Composition de la panière";
+      position: absolute;
+      top: -25px;
+      background: #a1887f;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 15px;
+      font-size: 16px;
+    }
+
+    .compteur {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #6d4c41;
+    }
+
+    #validerBtn, .action-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #6d4c41;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    #validerBtn:hover, .action-btn:hover {
+      background-color: #5d4037;
+    }
+
+    #message {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .draggable-added {
+      animation: pop 0.3s ease-out;
+    }
+
+    @keyframes fadeOut {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.5); }
+    }
+
+    .fade-out {
+      animation: fadeOut 0.3s forwards;
+    }
+
+    .paniere-pain {
+      position: relative;
+      transition: transform 0.2s ease;
+    }
+
+    .paniere-pain:hover {
+      transform: scale(1.1);
+    }
+
+    .paniere-pain::after {
+      content: "🗑️";
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: white;
+      border-radius: 50%;
+      font-size: 16px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .paniere-pain:hover::after {
+      opacity: 1;
+    }
+
+    #nextSlideBtn {
+      display: none;
+    }
+
+  </style>
+</head>
+<body>
+
+  <h2>Glisse les pains dans la panière</h2>
+
+  <div class="controls">
+    <div class="draggables">
+      <div class="draggable pain-cereales" draggable="true" data-type="cereales" title="Pain aux céréales" aria-label="Pain aux céréales"></div>
+      <div class="draggable pain-fruits" draggable="true" data-type="fruits" title="Pain aux fruits secs" aria-label="Pain aux fruits secs"></div>
+    </div>
+    <div class="action-btns">
+      <button class="action-btn" id="resetBtn">Reset</button>
+      <button class="action-btn" id="add5FruitsBtn">+5 Fruits</button>
+      <button class="action-btn" id="add5CerealesBtn">+5 Céréales</button>
+    </div>
+  </div>
+
+  <div class="dropzone" id="paniere" aria-label="Panière"></div>
+
+  <div class="compteur" id="compteur">Céréales: 0 | Fruits: 0</div>
+
+  <button id="validerBtn">Valider ma panière</button>
+  <div id="message"></div>
+
+  <!-- Bouton caché pour passer à la suite -->
+  <button id="nextSlideBtn" class="action-btn">Passer à la suite</button>
+
+  <script>
+    const paniere = document.getElementById('paniere');
+    const painModels = document.querySelectorAll('.draggable');
+
+    function dragStartHandler(e) {
+      e.dataTransfer.setData('type', e.target.dataset.type);
+      e.dataTransfer.setData('isModel', 'true');
+    }
+
+    painModels.forEach(pain => {
+      pain.addEventListener('dragstart', dragStartHandler);
+    });
+
+    paniere.addEventListener('dragover', e => e.preventDefault());
+
+    paniere.addEventListener('drop', e => {
+      e.preventDefault();
+      const type = e.dataTransfer.getData('type');
+      const isModel = e.dataTransfer.getData('isModel') === 'true';
+
+      if (type) {
+        createPainElement(type, false);
+        getPainCounts();
+      }
+    });
+
+    function createPainElement(type, isModel = false) {
+      const el = document.createElement('div');
+      el.className = `draggable pain-${type}`;
+      el.draggable = true;
+      el.dataset.type = type;
+      el.title = type === 'cereales' ? "Pain aux céréales" : "Pain aux fruits secs";
+      el.style.width = isModel ? '70px' : '50px';
+      el.style.height = isModel ? '70px' : '50px';
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
+
+      if (isModel) {
+        el.addEventListener('dragstart', dragStartHandler);
+        document.querySelector('.draggables').appendChild(el);
+      } else {
+        el.classList.add('draggable-added', 'paniere-pain');
+        el.addEventListener('click', () => {
+          el.classList.add('fade-out');
+          new Audio('https://assets.mixkit.co/sfx/preview/mixkit-pop-into-place-2073.mp3').play();
+          setTimeout(() => {
+            el.remove();
+            getPainCounts();
+          }, 300);
+        });
+        paniere.appendChild(el);
+      }
+    }
+
+    function getPainCounts() {
+      const pains = paniere.querySelectorAll('.draggable');
+      let countCereales = 0;
+      let countFruits = 0;
+
+      pains.forEach(p => {
+        if (p.dataset.type === 'cereales') countCereales++;
+        if (p.dataset.type === 'fruits') countFruits++;
+      });
+
+      document.getElementById('compteur').textContent = `Céréales: ${countCereales} | Fruits: ${countFruits}`;
+      return { countCereales, countFruits };
+    }
+
+    document.getElementById('validerBtn').addEventListener('click', () => {
+      const { countCereales, countFruits } = getPainCounts();
+      const messageDiv = document.getElementById('message');
+
+      const errorSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-digital-buzzer-1101.mp3');
+
+      if (countCereales === 8 && countFruits === 9) {
+        new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3').play();
+        messageDiv.textContent = "Parfait ! Composition validée 🎉";
+        messageDiv.style.color = "#2e7d32";
+        document.getElementById('nextSlideBtn').style.display = 'inline-block'; // Affiche le bouton
+      } else {
+        errorSound.play();
+        messageDiv.textContent = "La composition n’est pas encore correcte, vérifie bien tes pains !";
+        messageDiv.style.color = "#d84315";
+      }
+    });
+
+    document.getElementById('nextSlideBtn').addEventListener('click', () => {
+      window.parent.postMessage({ type: "goToNextSlide" }, "*");
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      paniere.innerHTML = '';
+      document.getElementById('compteur').textContent = 'Céréales: 0 | Fruits: 0';
+      document.getElementById('message').textContent = '';
+      document.getElementById('nextSlideBtn').style.display = 'none';
+    });
+
+    document.getElementById('add5FruitsBtn').addEventListener('click', () => {
+      for (let i = 0; i < 5; i++) {
+        createPainElement('fruits', false);
+      }
+      getPainCounts();
+    });
+
+    document.getElementById('add5CerealesBtn').addEventListener('click', () => {
+      for (let i = 0; i < 5; i++) {
+        createPainElement('cereales', false);
+      }
+      getPainCounts();
+    });
+  </script>
+</body>
+</html>
